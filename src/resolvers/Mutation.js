@@ -44,6 +44,26 @@ const deleteLink = async (parent, { id }, context) => {
   return context.prisma.deleteLink({ id })
 }
 
+const vote = async (parent, args, context, info) => {
+  // 1
+  const userId = getUserId(context)
+
+  // 2
+  const voteExists = await context.prisma.$exists.vote({
+    user: { id: userId },
+    link: { id: args.linkId },
+  })
+  if (voteExists) {
+    throw new Error(`Already voted for link: ${args.linkId}`)
+  }
+
+  // 3
+  return context.prisma.createVote({
+    user: { connect: { id: userId } },
+    link: { connect: { id: args.linkId } },
+  })
+}
+
 const signup = async (parent, args, context, info) => {
   const hashedPassword = await bcrypt.hash(args.password, 10)
   const {password, ...user} = await context.prisma.createUser({ ...args, password: hashedPassword })
@@ -79,6 +99,7 @@ module.exports = {
   post,
   updateLink,
   deleteLink,
+  vote,
   signup,
   login
 }
